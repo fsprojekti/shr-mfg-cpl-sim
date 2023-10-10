@@ -1,0 +1,25 @@
+{
+  "name": "shr-mfg-cpl-sim",
+  "version": "1.0.0",
+  "description": "",
+  "main": "agents/AgentPackage.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fsprojekti/shr-mfg-cpl-sim.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/fsprojekti/shr-mfg-cpl-sim/issues"
+  },
+  "homepage": "https://github.com/fsprojekti/shr-mfg-cpl-sim#readme",
+  "dependencies": {
+    "mongodb-memory-server": "^8.15.1",
+    "mongoose": "^7.5.3",
+    "sinon": "^16.0.0"
+  }
+}
