@@ -1,7 +1,7 @@
 const {mongoose} = require('mongoose');
 
 const serviceSchema = new mongoose.Schema({
-        //States ["IDLE", "ACTIVE", "DONE"]
+        //States ["IDLE", "MARKET","OFFER_REJECTED","OFFER_EXPIRED","ACTIVE", "DONE"]
         state: {type: String, default: "IDLE"},
         //Cross-reference to Offer schema
         idOffers: [{type: mongoose.Schema.Types.ObjectId, ref: 'Offer'}],

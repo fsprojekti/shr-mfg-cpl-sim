@@ -32,11 +32,7 @@ exports.send = (offerDirect, provider) => {
             await offerDirect.save();
             //Start expiry timer
             setTimeout(async () => {
-                //Set state to EXPIRED
-                offerDirect.state = "EXPIRED";
-                await offerDirect.save();
-                //Emit event offerDirectExpired
-                emitter.emit('offerDirectExpired', offerDirect);
+               await this.expire(offerDirect);
             }, offerDirect.expiryTimestamp - Math.floor(Date.now() / 1000))
             resolve(offerDirect)
         } catch (e) {
@@ -70,6 +66,22 @@ exports.reject = (offerDirect) => {
             await offerDirect.save();
             //Emit event offerDirectReject
             emitter.emit('offerDirectReject', offerDirect);
+            resolve(offerDirect)
+        } catch (e) {
+            reject(e);
+        }
+    })
+}
+
+exports.expire = (offerDirect) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            //Reject if offer not in state MARKET
+            if (offerDirect.state !== "MARKET") reject("Offer not in state MARKET");
+            offerDirect.state = "EXPIRED";
+            await offerDirect.save();
+            //Emit event offerDirectExpired
+            emitter.emit('offerDirectExpired', offerDirect);
             resolve(offerDirect)
         } catch (e) {
             reject(e);
