@@ -34,9 +34,13 @@ exports.rentService = (consumer) => {
             if (service) {
                 //Reject if last service is in state ACTIVE
                 if (service.state === "ACTIVE") reject("Last service is in state ACTIVE");
-                //Reject if last service is in state MARKET
-                if (service.state === "MARKET") reject("Last service is in state MARKET");
-            }else{
+
+                if (service.state === "MARKET") {
+                    //Reject if last offer direct is in state MARKET
+                    let offerDirect = await serviceOfferDirect.OfferDirect.findOne({idService: service._id});
+                    if (offerDirect.state === "MARKET") reject("Last offer direct is in state MARKET");
+                }
+            } else {
                 service = await serviceService.create(consumer);
             }
             // Calculate price
@@ -46,17 +50,61 @@ exports.rentService = (consumer) => {
             // Calculate offer provider
             let provider = await clcOfferProvider(service);
 
-            //Create offer direct
-            let offerDirect = await serviceOfferDirect.create(service, price, expiryTimestamp);
-
-            //Send offer direct
-            offerDirect = await serviceOfferDirect.send(offerDirect, provider);
-
-
+            //Rent service
+            let offerDirect = await serviceService.rent(service, price, expiryTimestamp, provider);
+            resolve(offerDirect);
         } catch (e) {
             reject(e);
         }
     })
+}
+
+exports.offerDirectAccepted = (offerDirect) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            //Reject if offer not defined
+            if (!offerDirect) reject("Offer not defined");
+            //Reject if offer not in state MARKET
+            if (offerDirect.state !== "MARKET") reject("Offer not in state MARKET");
+            //Get account from offer direct
+            let account = await serviceAccount.Account.findOne({_id: offerDirect.idAccountSeller});
+            //Get consumer of service
+            let consumer = await Consumer.findOne({_id: offerDirect.idBuyer});
+            //Reject if consumer not found
+            if (!consumer) reject("Consumer not found to rent service");
+            //Change state of offer direct to ACCEPTED
+            offerDirect.state = "ACCEPTED";
+            await offerDirect.save();
+            resolve(offerDirect);
+        } catch (e) {
+            reject(e);
+        }
+    })
+
+}
+
+exports.offerDirectRejected = (offerDirect) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            //Reject if offer not defined
+            if (!offerDirect) reject("Offer not defined");
+            //Reject if offer not in state MARKET
+            if (offerDirect.state !== "MARKET") reject("Offer not in state MARKET");
+            //Get consumer of service
+            let consumer = await Consumer.findOne({_id: offerDirect.idBuyer});
+            //Reject if consumer not found
+            if (!consumer) reject("Consumer not found to rent service");
+            //Change state of offer direct to REJECTED
+            offerDirect.state = "REJECTED";
+            await offerDirect.save();
+            //Rent service again
+            await this.rentService(consumer);
+            resolve(offerDirect);
+        } catch (e) {
+            reject(e);
+        }
+    })
+
 }
 
 let clcOfferPrice = (service) => {
@@ -91,3 +139,54 @@ let clcOfferProvider = (service) => {
         }
     })
 }
+
+
+//Events
+//Service commenced
+emitter.on('serviceCommenced', async (service) => {
+    try {
+        //Log event to console in yellow color add id of service and add timestamp in format YYYY-MM-DD HH:mm:ss at the beginning
+        console.log("\x1b[33m%s\x1b[0m", new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '') + " serviceCommenced " + service._id);
+
+
+    } catch (e) {
+        console.log(e);
+    }
+});
+
+//Service completed
+emitter.on('serviceCompleted', (service) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            //Log event to console in yellow color add id of service and add timestamp in format YYYY-MM-DD HH:mm:ss at the beginning
+            console.log("\x1b[33m%s\x1b[0m", new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '') + " serviceCompleted " + service._id);
+            //Get consumer of service
+            let consumer = await Consumer.findOne({_id: service.idConsumer});
+            //Reject if consumer not found
+            if (!consumer) reject("Consumer not found to rent service");
+            //Rent new service
+            await this.rentService(consumer);
+            resolve(service);
+        } catch (e) {
+            console.log(e);
+        }
+    })
+});
+
+//Offer direct expired
+emitter.on('offerDirectExpired', (offerDirect) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            //Log event to console in yellow color add id of offer direct and add timestamp in format YYYY-MM-DD HH:mm:ss at the beginning
+            console.log("\x1b[33m%s\x1b[0m", new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '') + " offerDirectExpired " + offerDirect._id);
+            //Get consumer of service
+            let consumer = await Consumer.findOne({_id: offerDirect.idBuyer});
+            //Reject if consumer not found
+            if (!consumer) reject("Consumer not found to rent service");
+            //Rent new service
+            await this.rentService(consumer);
+        } catch (e) {
+            console.log(e);
+        }
+    })
+});

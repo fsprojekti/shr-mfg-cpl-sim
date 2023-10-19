@@ -38,9 +38,8 @@ mongoose.connect(config.db.url, {dbName: config.db.name})
         let consumer = await serviceConsumer.create(accountConsumer);
         let accountProvider = await serviceAccount.create();
         let provider = await serviceProvider.create(accountProvider);
-        let service = await serviceService.create(consumer);
-        let offerDirect = await serviceOfferDirect.create(service, 10,new Date().getTime() + 3600);
-        offerDirect = await serviceOfferDirect.send(offerDirect, provider);
+
+        await serviceConsumer.rentService(consumer);
 
         clock.tick(3599);
         console.log("pause")

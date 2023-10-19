@@ -32,6 +32,9 @@ graph TD
 
 ### Events
 
+* serviceCommenced
+* serviceCompleted
+
 ```mermaid
 graph TD
     E1((("offer direct expired")))

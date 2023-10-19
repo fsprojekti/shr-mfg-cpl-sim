@@ -4,15 +4,17 @@ const emitter = require('../utils/events').eventEmitter;
 exports.OfferDirect = OfferDirect;
 
 const serviceAccount = require("./Account");
+const serviceProvider = require("./Provider");
+const serviceConsumer = require("./Consumer");
 
 exports.create = (service, price, expiryTimestamp) => {
     return new Promise(async (resolve, reject) => {
         try {
             let count = await OfferDirect.countDocuments({idService: service._id});
-            //Get account of consumer
-            let account = await serviceAccount.Account.findById(service.idConsumer);
+            //Get consumer
+            let consumer = await serviceConsumer.Consumer.findById(service.idConsumer);
             let offerDirect = new OfferDirect({
-                idSeller: account._id,
+                idAccountSeller: consumer.idAccount,
                 idService: service._id,
                 price: price,
                 expiryTimestamp: expiryTimestamp,
@@ -36,11 +38,16 @@ exports.send = (offerDirect, provider) => {
             offerDirect.idBuyer = provider.idAccount;
             offerDirect.state = "MARKET";
             await offerDirect.save();
-            //Emit event offerDirectSend
-            emitter.emit('offerDirectSend', offerDirect);
+            //Send offer to provider
+            await serviceProvider.offerDirectReceived(offerDirect);
             //Start expiry timer
-            setTimeout(async () => {
-               await this.expire(offerDirect);
+            setTimeout(async (offerDirect) => {
+                //Check if offer is in state ACCEPTED or REJECTED
+                if (offerDirect.state === "ACCEPTED" || offerDirect.state === "REJECTED") return;
+                offerDirect.state = "EXPIRED";
+                await offerDirect.save();
+                //Emit event offerDirectExpired
+                emitter.emit('offerDirectExpired', offerDirect);
             }, offerDirect.expiryTimestamp - Math.floor(Date.now() / 1000))
             resolve(offerDirect)
         } catch (e) {

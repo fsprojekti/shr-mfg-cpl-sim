@@ -20,36 +20,9 @@ exports.create = (consumer) => {
     })
 }
 
-exports.market = (service) => {
+exports.rent = (service, price, expiryTimestamp, provider) => {
     return new Promise(async (resolve, reject) => {
         try {
-            //Reject if service not defined
-            if (!service) reject("Service not defined");
-            //Reject if service not in state IDLE or OFFER_REJECTED or OFFER_EXPIRED
-            if (service.state !== "IDLE" && service.state !== "OFFER_REJECTED" && service.state !== "OFFER_EXPIRED") reject("Service not in state IDLE or OFFER_REJECTED or OFFER_EXPIRED")
-            let price = 0;
-            let expiryTimestamp = 0;
-            let provider = null;
-            //Switch for each state
-            switch (service.state) {
-                case "IDLE": {
-                    price = await clcPrice(service);
-                    expiryTimestamp = await clcExpiryTimestamp(service);
-                    provider = await clcProvider(service);
-                }
-                    break;
-                case "OFFER_REJECTED": {
-                    price = await clcPrice(service);
-                    expiryTimestamp = await clcExpiryTimestamp(service);
-                    provider = await clcProvider(service);
-                }
-                    break;
-                case "OFFER_EXPIRED":{
-                    price = await clcPrice(service);
-                    expiryTimestamp = await clcExpiryTimestamp(service);
-                    provider = await clcProvider(service);
-                }
-            }
             //Create offer direct
             let offer = await serviceOffer.create(service, price, expiryTimestamp);
             //Send offer direct
@@ -67,12 +40,6 @@ exports.market = (service) => {
 exports.commence = (service) => {
     return new Promise(async (resolve, reject) => {
         try {
-            //Get offer for this service
-            let offer = await serviceOffer.OfferDirect.findOne({idService: service._id});
-            //Reject if offer not exists
-            if (!offer) reject("Offer direct not exists");
-            //Reject if offer not in state ACCEPTED
-            if (offer.state !== "ACCEPTED") reject("Offer direct not in state ACCEPTED");
             //Reject if service not in state MARKET
             if (service.state !== "MARKET") reject("Service not in state MARKET");
             service.state = "ACTIVE";
@@ -83,7 +50,6 @@ exports.commence = (service) => {
             emitter.emit('serviceCommenced', service);
             setTimeout(async () => {
                 await this.complete(service);
-                emitter.emit('serviceCompleted', service);
             }, service.endTimestamp - time);
             resolve(service);
         } catch (e) {
@@ -99,6 +65,7 @@ exports.complete = (service) => {
             if (service.state !== "ACTIVE") reject("Service not in state ACTIVE");
             service.state = "DONE";
             await service.save();
+            emitter.emit('serviceCompleted', service);
             resolve(service);
         } catch (e) {
             reject(e);
