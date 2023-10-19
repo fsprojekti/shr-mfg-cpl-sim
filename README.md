@@ -2,12 +2,56 @@
 
 ## Consumer
 
+### Properties
+
+### Functions
+* rentService
+
 ```mermaid
 graph TD
-    E1((("service <br>commenced")))
-    E2((("service <br>completed")))-->T1["serviceService.create(consumer)"]
+    S1(["rentService"])
+    S2{{"service in state ACTIVE?"}}
+    S3{{"service in state MARKET?"}}
+    S4["get or create new service"]
+    S5["create new offer direct"]
+    S6["send offer direct"]
+    
+    S1 --> S2
+    S2 -->|NO| S3
+    S2 -->|YES| R1(["reject"])
+    S3 -->|YES| R2(["reject"])
+    S3-->|NO| S4
+    S4-->S5
+    S5-->S6
+    S6-->E1(["end"])
+
+```
+* clcOfferPrice
+* clcOfferDuration
+* clcOfferProvider
+
+### Events
+
+```mermaid
+graph TD
+    E1((("offer direct expired")))
+    E2((("offer direct accepted")))
+    E3((("offer direct rejected")))
+    E4((("offer direct send")))
+    S1(("service commenced"))
+    S2(("service completed"))
     
 ```
+
+
+
+
+
+
+
+
+
+
 
 ## Service
 

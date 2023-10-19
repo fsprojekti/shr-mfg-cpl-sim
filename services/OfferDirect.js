@@ -3,14 +3,20 @@ const emitter = require('../utils/events').eventEmitter;
 
 exports.OfferDirect = OfferDirect;
 
+const serviceAccount = require("./Account");
+
 exports.create = (service, price, expiryTimestamp) => {
     return new Promise(async (resolve, reject) => {
         try {
+            let count = await OfferDirect.countDocuments({idService: service._id});
+            //Get account of consumer
+            let account = await serviceAccount.Account.findById(service.idConsumer);
             let offerDirect = new OfferDirect({
-                idSeller: service.idConsumer,
+                idSeller: account._id,
                 idService: service._id,
                 price: price,
-                expiryTimestamp: expiryTimestamp
+                expiryTimestamp: expiryTimestamp,
+                count: count
             });
             await offerDirect.save();
             resolve(offerDirect);
@@ -27,9 +33,11 @@ exports.send = (offerDirect, provider) => {
             if (offerDirect.state !== "IDLE") reject("Offer not in state IDLE");
             //Reject if provider not defined
             if (!provider) reject("Provider not defined");
-            offerDirect.idBuyer = provider._id;
+            offerDirect.idBuyer = provider.idAccount;
             offerDirect.state = "MARKET";
             await offerDirect.save();
+            //Emit event offerDirectSend
+            emitter.emit('offerDirectSend', offerDirect);
             //Start expiry timer
             setTimeout(async () => {
                await this.expire(offerDirect);
@@ -41,50 +49,30 @@ exports.send = (offerDirect, provider) => {
     })
 }
 
-exports.accept = (offerDirect) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            //Reject if offer not in state MARKET
-            if (offerDirect.state !== "MARKET") reject("Offer not in state MARKET");
-            offerDirect.state = "ACCEPTED";
-            await offerDirect.save();
-            //Emit event offerDirectAccept
-            emitter.emit('offerDirectAccept', offerDirect);
-            resolve(offerDirect)
-        } catch (e) {
-            reject(e);
-        }
-    })
-}
+//Events
+emitter.on('offerDirectAccepted', async (offerDirect) => {
+    try {
+        console.log("offerDirectSend");
+        console.log(offerDirect);
+    } catch (e) {
+        console.log(e);
+    }
+});
 
-exports.reject = (offerDirect) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            //Reject if offer not in state MARKET
-            if (offerDirect.state !== "MARKET") reject("Offer not in state MARKET");
-            offerDirect.state = "REJECTED";
-            await offerDirect.save();
-            //Emit event offerDirectReject
-            emitter.emit('offerDirectReject', offerDirect);
-            resolve(offerDirect)
-        } catch (e) {
-            reject(e);
-        }
-    })
-}
+emitter.on('offerDirectRejected', async (offerDirect) => {
+    try {
+        console.log("offerDirectReject");
+        console.log(offerDirect);
+    } catch (e) {
+        console.log(e);
+    }
+}   );
 
-exports.expire = (offerDirect) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            //Reject if offer not in state MARKET
-            if (offerDirect.state !== "MARKET") reject("Offer not in state MARKET");
-            offerDirect.state = "EXPIRED";
-            await offerDirect.save();
-            //Emit event offerDirectExpired
-            emitter.emit('offerDirectExpired', offerDirect);
-            resolve(offerDirect)
-        } catch (e) {
-            reject(e);
-        }
-    })
-}
+emitter.on('offerDirectExpired', async (offerDirect) => {
+    try {
+        console.log("offerDirectExpired");
+        console.log(offerDirect);
+    } catch (e) {
+        console.log(e);
+    }
+});

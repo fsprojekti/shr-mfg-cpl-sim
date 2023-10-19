@@ -30,15 +30,62 @@ exports.rentService = (consumer) => {
             //Reject if consumer not defined
             if (!consumer) reject("Consumer not defined");
             //Find services of consumer and sort by count from highest to lowest
-            let services = await serviceService.Service.find({idConsumer: consumer._id}).sort({count: -1});
-            //Reject if first service is in state MARKET
-            if (services[0].state === "MARKET") reject("Can't rent new service while a previous service is in state MARKET");
-            //Reject if fist service is in state ACTIVE
-            if (services[0].state === "ACTIVE") reject("Can't rent new service while a previous service is in state ACTIVE");
+            let service = await serviceService.Service.find({idConsumer: consumer._id}).sort({count: -1})[0];
+            if (service) {
+                //Reject if last service is in state ACTIVE
+                if (service.state === "ACTIVE") reject("Last service is in state ACTIVE");
+                //Reject if last service is in state MARKET
+                if (service.state === "MARKET") reject("Last service is in state MARKET");
+            }else{
+                service = await serviceService.create(consumer);
+            }
+            // Calculate price
+            let price = await clcOfferPrice(service);
+            // Calculate expiry timestamp
+            let expiryTimestamp = await clcOfferDuration(service) + Math.floor(Date.now() / 1000);
+            // Calculate offer provider
+            let provider = await clcOfferProvider(service);
 
-            let service = await serviceService.create(consumer);
+            //Create offer direct
+            let offerDirect = await serviceOfferDirect.create(service, price, expiryTimestamp);
+
+            //Send offer direct
+            offerDirect = await serviceOfferDirect.send(offerDirect, provider);
 
 
+        } catch (e) {
+            reject(e);
+        }
+    })
+}
+
+let clcOfferPrice = (service) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            //Random price from 1 to 10
+            let price = Math.floor(Math.random() * 10) + 1;
+            resolve(price);
+        } catch (e) {
+            reject(e);
+        }
+    })
+}
+
+let clcOfferDuration = (service) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            resolve(3600);
+        } catch (e) {
+            reject(e);
+        }
+    })
+}
+
+let clcOfferProvider = (service) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let provider = await serviceProvider.Provider.findOne();
+            resolve(provider);
         } catch (e) {
             reject(e);
         }
