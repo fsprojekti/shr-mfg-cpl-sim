@@ -20,6 +20,7 @@
   "dependencies": {
     "mongodb-memory-server": "^8.15.1",
     "mongoose": "^7.5.3",
-    "sinon": "^16.0.0"
+    "sinon": "^16.0.0",
+    "winston": "^3.11.0"
   }
 }

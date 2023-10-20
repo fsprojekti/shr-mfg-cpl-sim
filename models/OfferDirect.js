@@ -9,6 +9,8 @@ const offerDirectSchema = new mongoose.Schema({
         state: {type: String, default: "IDLE"},
         //Index of offer direct
         count: {type: Number, required: true},
+        //Cross-reference to Service schema
+        idService: {type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: true},
     },
     {timestamps: true})
 

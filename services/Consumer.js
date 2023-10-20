@@ -5,20 +5,25 @@ const emitter = require('../utils/events').eventEmitter;
 const serviceService = require("./Service");
 const serviceProvider = require("./Provider");
 const serviceOfferDirect = require("./OfferDirect");
+const serviceAccount = require("./Account");
+const logger = require('../utils/logger');
 
 exports.Consumer = Consumer;
 
 exports.create = (account) => {
     return new Promise(async (resolve, reject) => {
         try {
+           logger.silly("serviceCustomer.create() called with account: "+ account._id);
             //Reject if account not defined
             if (!account) reject("Account not defined");
             let consumer = new Consumer({
                 idAccount: account._id,
             });
             await consumer.save();
+            logger.silly("serviceCustomer.create() created consumer: "+ consumer._id);
             resolve(consumer);
         } catch (e) {
+            logger.error("serviceCustomer.create() error: "+ e);
             reject(e);
         }
     })
@@ -27,6 +32,7 @@ exports.create = (account) => {
 exports.rentService = (consumer) => {
     return new Promise(async (resolve, reject) => {
         try {
+            logger.silly("serviceCustomer.rentService() called with consumer: "+ consumer._id);
             //Reject if consumer not defined
             if (!consumer) reject("Consumer not defined");
             //Find services of consumer and sort by count from highest to lowest
@@ -41,19 +47,26 @@ exports.rentService = (consumer) => {
                     if (offerDirect.state === "MARKET") reject("Last offer direct is in state MARKET");
                 }
             } else {
+                logger.silly("serviceCustomer.rentService() no service found for consumer: "+ consumer._id);
                 service = await serviceService.create(consumer);
             }
             // Calculate price
             let price = await clcOfferPrice(service);
+            logger.debug("serviceCustomer.rentService() calculated price: "+ price);
             // Calculate expiry timestamp
             let expiryTimestamp = await clcOfferDuration(service) + Math.floor(Date.now() / 1000);
+            logger.debug("serviceCustomer.rentService() calculated expiryTimestamp: "+ expiryTimestamp);
             // Calculate offer provider
             let provider = await clcOfferProvider(service);
+            logger.debug("serviceCustomer.rentService() calculated provider: "+ provider._id);
 
             //Rent service
+            logger.silly("serviceCustomer.rentService() renting service: "+ service._id);
             let offerDirect = await serviceService.rent(service, price, expiryTimestamp, provider);
+            logger.silly("serviceCustomer.rentService() rented service: "+ service._id);
             resolve(offerDirect);
         } catch (e) {
+            logger.error("serviceCustomer.rentService() error: "+ e);
             reject(e);
         }
     })
@@ -62,6 +75,7 @@ exports.rentService = (consumer) => {
 exports.offerDirectAccepted = (offerDirect) => {
     return new Promise(async (resolve, reject) => {
         try {
+            logger.silly("serviceCustomer.offerDirectAccepted() called with offerDirect: "+ offerDirect._id);
             //Reject if offer not defined
             if (!offerDirect) reject("Offer not defined");
             //Reject if offer not in state MARKET
@@ -69,14 +83,16 @@ exports.offerDirectAccepted = (offerDirect) => {
             //Get account from offer direct
             let account = await serviceAccount.Account.findOne({_id: offerDirect.idAccountSeller});
             //Get consumer of service
-            let consumer = await Consumer.findOne({_id: offerDirect.idBuyer});
+            let consumer = await Consumer.findOne({idAccount: account._id});
             //Reject if consumer not found
             if (!consumer) reject("Consumer not found to rent service");
             //Change state of offer direct to ACCEPTED
             offerDirect.state = "ACCEPTED";
             await offerDirect.save();
+            logger.verbose("serviceCustomer.offerDirectAccepted() offer direct state set to ACCEPTED: "+ offerDirect._id);
             resolve(offerDirect);
         } catch (e) {
+            logger.error("serviceCustomer.offerDirectAccepted() error: "+ e);
             reject(e);
         }
     })
@@ -86,6 +102,7 @@ exports.offerDirectAccepted = (offerDirect) => {
 exports.offerDirectRejected = (offerDirect) => {
     return new Promise(async (resolve, reject) => {
         try {
+            logger.silly("serviceCustomer.offerDirectRejected() called with offerDirect: "+ offerDirect._id);
             //Reject if offer not defined
             if (!offerDirect) reject("Offer not defined");
             //Reject if offer not in state MARKET
@@ -97,7 +114,9 @@ exports.offerDirectRejected = (offerDirect) => {
             //Change state of offer direct to REJECTED
             offerDirect.state = "REJECTED";
             await offerDirect.save();
+            logger.verbose("serviceCustomer.offerDirectRejected() offer direct state set to REJECTED: "+ offerDirect._id);
             //Rent service again
+            logger.silly("serviceCustomer.offerDirectRejected() renting service again: "+ offerDirect._id);
             await this.rentService(consumer);
             resolve(offerDirect);
         } catch (e) {
