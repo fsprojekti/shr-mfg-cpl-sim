@@ -1,23 +1,22 @@
-const {mongoose} = require('mongoose');
+const DbLocal = require("db-local");
+const config = require("../config.json");
+const {Schema} = new DbLocal({path: config.db});
 
-const serviceSchema = new mongoose.Schema({
-        //States ["IDLE", "MARKET","ACTIVE", "DONE"]
-        state: {type: String, default: "IDLE"},
-        //Cross-reference to Offer schema
-        idOffers: [{type: mongoose.Schema.Types.ObjectId, ref: 'Offer'}],
-        //Start service timestamp
-        startTimestamp: {type: Number},
-        //End service timestamp
-        endTimestamp: {type: Number},
-        //Duration in seconds default to 1 hour
-        duration: {type: Number, default: 3600},
-        //Service consumer id
-        idConsumer: {type: mongoose.Schema.Types.ObjectId, ref: 'Consumer', required: true},
-        //Service provider id
-        idProvider: {type: mongoose.Schema.Types.ObjectId, ref: 'Provider'},
-        //Count
-        count: {type: Number, default: 0},
-    },
-    {timestamps: true})
-
-module.exports = mongoose.model('Service', serviceSchema);
+exports.Service = Schema("Services", {
+    //States ["IDLE", "MARKET","ACTIVE", "DONE"]
+    state: {type: String, default: "IDLE"},
+    //Cross-reference to Offer schema
+    idOffers: [{type: String}],
+    //Start service timestamp
+    startTimestamp: {type: Number},
+    //End service timestamp
+    endTimestamp: {type: Number},
+    //Duration in seconds default to 1 hour
+    duration: {type: Number, default: 3600},
+    //Service consumer id
+    idConsumer: {type: String, required: true},
+    //Service provider id
+    idProvider: {type: String},
+    //Count
+    count: {type: Number, default: 0},
+},);

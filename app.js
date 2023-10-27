@@ -1,23 +1,5 @@
-// const {mongoose} = require('mongoose');
-// const {MongoMemoryServer} = require('mongodb-memory-server');
-//
-// MongoMemoryServer.create()
-//     .then((mongoServer) => {
-//         mongoose.connect(mongoServer.getUri(), {dbName: "test"})
-//             .then(() => {
-//                 console.log("Connected to database");
-//             }).catch((e) => {
-//             console.log(e);
-//         });
-//     }).catch((e) => {
-//     console.log(e);
-// });
 const config = require('./config.json');
-const {mongoose} = require('mongoose');
-
-
-const sinon = require('sinon');
-const clock = sinon.useFakeTimers();
+const clock = require('./utils/clock');
 
 const serviceAccount = require('./services/Account');
 const serviceConsumer = require('./services/Consumer');
@@ -25,28 +7,45 @@ const serviceProvider = require('./services/Provider');
 const serviceOfferDirect = require('./services/OfferDirect');
 const serviceService = require('./services/Service');
 
-mongoose.connect(config.db.url, {dbName: config.db.name})
-    .then(async () => {
-        console.log("Connected to database");
-        //Drop account collection
-        await serviceAccount.Account.deleteMany();
-        await serviceConsumer.Consumer.deleteMany();
-        await serviceService.Service.deleteMany();
-        await serviceProvider.Provider.deleteMany();
-        await serviceOfferDirect.OfferDirect.deleteMany();
+const run = async () => {
+    //Drop account collection
+    serviceAccount.Account.remove({});
+    serviceConsumer.Consumer.remove({});
+    serviceService.Service.remove({});
+    serviceProvider.Provider.remove({});
+    serviceOfferDirect.OfferDirect.remove({});
 
-        let accountConsumer = await serviceAccount.create();
-        let consumer = await serviceConsumer.create(accountConsumer);
-        let accountProvider = await serviceAccount.create();
-        let provider = await serviceProvider.create(accountProvider);
+    let consumer = await serviceConsumer.create(await serviceAccount.create());
+    let provider = await serviceProvider.create(await serviceAccount.create());
 
-        await serviceConsumer.rentService(consumer);
+    await serviceConsumer.rentService(consumer);
+    //
+    // for (let i = 0; i < 5000; i++) {
+        clock.tick(5000);
+    //     //await clock.runAllAsync();
+    // }
+}
 
-        clock.tick(3599);
-        console.log("pause")
-        clock.tick(10);
+run();
 
-    })
-    .catch(err => {
-        console.log(err);
-    });
+
+//
+// clock.tick(5000);
+// clock.runAllAsync();
+// clock.tick(1000);
+// clock.tick(1000);
+// clock.tick(1000);
+// clock.tick(1000);
+//
+// clock.tick(1000);
+// clock.tick(1000);
+// clock.tick(1000);
+// clock.tick(1000);
+// clock.tick(1000);
+//
+// clock.tick(1000);
+// clock.tick(1000);
+// clock.tick(1000);
+// clock.tick(1000);
+// clock.tick(1000);
+

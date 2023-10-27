@@ -1,9 +1,8 @@
-const {mongoose} = require('mongoose');
+const DbLocal = require("db-local");
+const config = require("../config.json");
+const {Schema} = new DbLocal({path: config.db});
 
-const accountSchema = new mongoose.Schema({
-        balance: {type: Number, default: 100},
-    },
-    {timestamps: true}
-);
+exports.Account = Schema("Accounts", {
+    balance: {type: Number, default: 100},
+})
 
-module.exports = mongoose.model('Account', accountSchema);

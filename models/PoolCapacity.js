@@ -1,9 +1,8 @@
-const {mongoose} = require('mongoose');
+const DbLocal = require("db-local");
+const config = require("../config.json");
+const {Schema} = new DbLocal({path: config.db});
 
-const poolCapacitySchema = new mongoose.Schema({
-        idOfferCapacity: {type: mongoose.Schema.Types.ObjectId, ref: 'OfferCapacity', required: true},
-    },
-    {timestamps: true}
-)
+exports.PoolCapacity = Schema("PoolsCapacity",{
+    idOfferCapacity: {type: String, required: true},
+},);
 
-module.exports = mongoose.model('PoolCapacity', poolCapacitySchema);

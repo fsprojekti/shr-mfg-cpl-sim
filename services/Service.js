@@ -1,4 +1,4 @@
-const Service = require('../models/Service');
+const {Service} = require('../models/Service');
 const emitter = require('../utils/events').eventEmitter;
 const serviceOffer = require("./OfferDirect");
 const serviceProvider = require("./Provider");
@@ -8,12 +8,15 @@ const logger = require('../utils/logger');
 exports.Service = Service;
 
 exports.create = (consumer) => {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
         try {
-            let service = new Service({
+            //Get number of services of consumer
+            let count = Service.find({idConsumer: consumer._id}).length;
+            let service = Service.create({
                 idConsumer: consumer._id,
-            });
-            await service.save();
+                duration: config.service.duration,
+                count: count
+            }).save();
             resolve(service);
         } catch (e) {
             reject(e);
@@ -29,14 +32,15 @@ exports.rent = (service, price, expiryTimestamp, provider) => {
             logger.silly("serviceService.rent() creating offer direct");
             let offer = await serviceOffer.create(service, price, expiryTimestamp);
             logger.silly("serviceService.rent() created offer direct: "+offer._id);
+            //Set state to MARKET
+            service.state = "MARKET";
+            await service.save();
+            logger.verbose("serviceService.rent() service state set to MARKET: "+service._id);
             //Send offer direct
             logger.silly("serviceService.rent() sending offer direct");
             await serviceOffer.send(offer, provider);
             logger.silly("serviceService.rent() offer direct send: "+offer._id);
-            //Set state to MARKET
-            service.state = "MARKET";
-            await service.save();
-            logger.silly("serviceService.rent() service state set to MARKET: "+service._id);
+
             resolve(offer);
         } catch (e) {
             reject(e);
@@ -51,12 +55,12 @@ exports.commence = (service) => {
             //Reject if service not in state MARKET
             if (service.state !== "MARKET") reject("Service not in state MARKET");
             service.state = "ACTIVE";
-            logger.silly("serviceService.commence() service state set to ACTIVE: "+service._id);
-            let time = Math.floor(Date.now() / 1000);
+            logger.verbose("serviceService.commence() service state set to ACTIVE: "+service._id);
+            let time = Math.floor(Date.now());
             service.startTimestamp = time;
-            logger.silly("serviceService.commence() service startTimestamp set to time: "+service.startTimestamp);
+            logger.debug("serviceService.commence() service startTimestamp set to time: "+service.startTimestamp);
             service.endTimestamp = time + service.duration;
-            logger.silly("serviceService.commence() service endTimestamp set to time + duration: "+service.endTimestamp);
+            logger.debug("serviceService.commence() service endTimestamp set to time: "+service.endTimestamp);
             await service.save();
             emitter.emit('serviceCommenced', service);
             logger.silly("serviceService.commence() serviceCommenced timer started: "+service._id);
@@ -75,13 +79,15 @@ exports.commence = (service) => {
 exports.complete = (service) => {
     return new Promise(async (resolve, reject) => {
         try {
+            logger.warn("Consumer event 44444 " + Math.floor(Date.now()));
             logger.info("serviceService.complete() called with service: "+ service._id);
             //Reject if service not in state ACTIVE
             if (service.state !== "ACTIVE") reject("Service not in state ACTIVE");
             service.state = "DONE";
-            logger.silly("serviceService.complete() service state set to DONE: "+service._id);
-            await service.save();
+            logger.verbose("serviceService.complete() service state set to DONE: "+service._id);
             emitter.emit('serviceCompleted', service);
+            await service.save();
+
             resolve(service);
         } catch (e) {
             reject(e);

@@ -1,12 +1,11 @@
-const Account = require('../models/Account');
+const {Account} = require('../models/Account');
 
 exports.Account = Account;
 
 exports.create = () => {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
         try {
-            let account = new Account({});
-            await account.save();
+            let account = Account.create({}).save();
             resolve(account);
         } catch (e) {
             reject(e);

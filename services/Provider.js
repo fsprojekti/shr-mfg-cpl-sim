@@ -1,4 +1,4 @@
-const Provider = require('../models/Provider');
+const {Provider} = require('../models/Provider');
 
 exports.Provider = Provider;
 
@@ -10,10 +10,9 @@ exports.create = (account) => {
         try {
             //Reject if account not defined
             if (!account) reject("Account not defined");
-            let provider = new Provider({
+            let provider = Provider.create({
                 idAccount: account._id,
-            });
-            await provider.save();
+            }).save();
             resolve(provider);
         } catch (e) {
             reject(e);
@@ -26,7 +25,7 @@ const logger = require('../utils/logger');
 exports.offerDirectReceived = (offerDirect) => {
     return new Promise(async (resolve, reject) => {
         try {
-            logger.silly("serviceProvider.offerDirectReceived() called with offerDirect: "+offerDirect._id);
+            logger.silly("serviceProvider.offerDirectReceived() called with offerDirect: " + offerDirect._id);
             //Reject if offer not defined
             if (!offerDirect) reject("Offer not defined");
             //Reject if offer not in state MARKET
@@ -36,27 +35,27 @@ exports.offerDirectReceived = (offerDirect) => {
             //Reject if provider not found
             if (!provider) reject("Provider not found");
             //Get current number of services with state ACTIVE
-            let count = await serviceService.Service.countDocuments({idProvider: provider._id, state: "ACTIVE"});
-            logger.silly("serviceProvider.offerDirectReceived() number of active services: "+count);
+            let count = await serviceService.Service.find({idProvider: provider._id, state: "ACTIVE"}).length;
+            logger.silly("serviceProvider.offerDirectReceived() number of active services: " + count);
             //Reject if count >= maxServices
-            if (count >= provider.servicesLimit){
-                logger.silly("serviceProvider.offerDirectReceived() reject offer direct: "+offerDirect._id);
+            if (count >= provider.servicesLimit) {
+                logger.silly("serviceProvider.offerDirectReceived() reject offer direct: " + offerDirect._id);
                 offerDirect = await serviceConsumer.offerDirectRejected(offerDirect);
-                logger.silly("serviceProvider.offerDirectReceived() rejected offer direct: "+offerDirect._id);
-            } else{
-                logger.silly("serviceProvider.offerDirectReceived() accept offer direct: "+offerDirect._id);
+                logger.silly("serviceProvider.offerDirectReceived() rejected offer direct: " + offerDirect._id);
+            } else {
+                logger.silly("serviceProvider.offerDirectReceived() accept offer direct: " + offerDirect._id);
                 offerDirect = await serviceConsumer.offerDirectAccepted(offerDirect);
-                logger.silly("serviceProvider.offerDirectReceived() accepted offer direct: "+offerDirect._id);
+                logger.silly("serviceProvider.offerDirectReceived() accepted offer direct: " + offerDirect._id);
                 //Get service
-                let service = await serviceService.Service.findById(offerDirect.idService);
+                let service = await serviceService.Service.findOne({_id: offerDirect.idService});
                 //Commence service
-                logger.silly("serviceProvider.offerDirectReceived() commence service: "+service._id);
+                logger.silly("serviceProvider.offerDirectReceived() commence service: " + service._id);
                 await serviceService.commence(service);
-                logger.silly("serviceProvider.offerDirectReceived() commenced service: "+service._id);
+                logger.silly("serviceProvider.offerDirectReceived() commenced service: " + service._id);
             }
             resolve(offerDirect);
         } catch (e) {
-            logger.error("serviceProvider.offerDirectReceived() error: "+e);
+            logger.error("serviceProvider.offerDirectReceived() error: " + e);
             reject(e);
         }
     })

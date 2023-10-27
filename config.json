@@ -1,0 +1,20 @@
+{
+  "db":  "./db",
+  "agentConsumer": {
+    "count": 1,
+    "settingsOffer": {
+      "expiryDuration": 3600,
+      "priceInterval": [1, 10]
+    }
+  },
+  "service": {
+    "duration" : 1000
+  },
+  "agentProvider": {
+    "count": 1,
+    "settings": {
+      "slotsCount": 10
+    }
+  },
+  "mode": "silly"
+}
