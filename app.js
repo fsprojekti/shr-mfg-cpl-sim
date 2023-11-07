@@ -1,5 +1,9 @@
 const config = require('./config.json');
-const clock = require('./utils/clock');
+
+
+var FakeTimers = require("@sinonjs/fake-timers");
+const clock = FakeTimers.install();
+
 
 const serviceAccount = require('./services/Account');
 const serviceConsumer = require('./services/Consumer');
@@ -20,10 +24,9 @@ const run = async () => {
 
     await serviceConsumer.rentService(consumer);
     //
-    for (let i = 0; i < 6000; i++) {
-        clock.tick(1);
-    //     //await clock.runAllAsync();
-    }
+     //for (let i = 0; i < 1; i++) {
+        await clock.tickAsync(6000);
+     //}
 }
 
 run();
