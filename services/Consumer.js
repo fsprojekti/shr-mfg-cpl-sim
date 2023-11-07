@@ -172,7 +172,7 @@ emitter.on('serviceCompleted', (service) => {
     return new Promise(async (resolve, reject) => {
         try {
             //log current time
-            logger.debug("Event ON serviceCompleted at Consumer with service: " + service._id);
+            logger.debug("Event ON serviceCompleted caught at Consumer with service: " + service._id);
             //Get consumer of service
             let consumer = await Consumer.findOne({_id: service.idConsumer});
             //Reject if consumer not found

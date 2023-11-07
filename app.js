@@ -23,10 +23,9 @@ const run = async () => {
     let provider = await serviceProvider.create(await serviceAccount.create());
 
     await serviceConsumer.rentService(consumer);
-    //
-     //for (let i = 0; i < 1; i++) {
-        await clock.tickAsync(6000);
-     //}
+
+        clock.tickAsync(6000);
+
 }
 
 run();
