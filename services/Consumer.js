@@ -48,6 +48,10 @@ exports.rentService = (consumer) => {
                     let offerDirect = await serviceOfferDirect.OfferDirect.findOne({idService: service._id});
                     if (offerDirect.state === "MARKET") reject("Last offer direct is in state MARKET");
                 }
+                if (service.state==="DONE"){
+                    logger.silly("serviceCustomer.rentService() no service found for consumer: " + consumer._id);
+                    service = await serviceService.create(consumer);
+                }
             } else {
                 logger.silly("serviceCustomer.rentService() no service found for consumer: " + consumer._id);
                 service = await serviceService.create(consumer);
@@ -164,36 +168,29 @@ let clcOfferProvider = (service) => {
 //Events
 
 //Service completed
-// emitter.on('serviceCompleted', (service) => {
-//     return new Promise(async (resolve, reject) => {
-//         try {
-//             //log current time
-//             logger.warn("Consumer event "+Math.floor(Date.now()));
-//             logger.debug("Event fired serviceCompleted with service: "+ service._id);
-//             //Get consumer of service
-//             let consumer = await Consumer.findOne({_id: service.idConsumer});
-//             //Reject if consumer not found
-//             if (!consumer) reject("Consumer not found to rent service");
-//             //Rent new service
-//             await this.rentService(consumer);
-//             resolve(service);
-//         } catch (e) {
-//             console.log(e);
-//         }
-//     })
-// });
-
 emitter.on('serviceCompleted', (service) => {
-    logger.warn("Consumer event " + Math.floor(Date.now()));
-    logger.debug("Event fired serviceCompleted with service: " + service._id);
-})
+    return new Promise(async (resolve, reject) => {
+        try {
+            //log current time
+            logger.debug("Event ON serviceCompleted at Consumer with service: " + service._id);
+            //Get consumer of service
+            let consumer = await Consumer.findOne({_id: service.idConsumer});
+            //Reject if consumer not found
+            if (!consumer) reject("Consumer not found to rent service");
+            //Rent new service
+            await this.rentService(consumer);
+            resolve(service);
+        } catch (e) {
+            console.log(e);
+        }
+    })
+});
 
 //Offer direct expired
 emitter.on('offerDirectExpired', (offerDirect) => {
     return new Promise(async (resolve, reject) => {
         try {
-            //Log event to console in yellow color add id of offer direct and add timestamp in format YYYY-MM-DD HH:mm:ss at the beginning
-            console.log("\x1b[33m%s\x1b[0m", new Date().toISOString().replace(/T/, ' ').replace(/\..+/, '') + " offerDirectExpired " + offerDirect._id);
+            logger.debug("Event offerDirectExpired caught at Consumer with offerDirect: " + offerDirect._id);
             //Get consumer of service
             let consumer = await Consumer.findOne({_id: offerDirect.idBuyer});
             //Reject if consumer not found

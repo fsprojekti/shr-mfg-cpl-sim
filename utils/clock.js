@@ -1,4 +1,8 @@
-const sinon = require('sinon');
-const clock = sinon.useFakeTimers();
+let currentTime = 0;
 
-module.exports = clock;
+module.exports = currentTime;
+
+module.exports.tick = (time) => {
+    currentTime += time;
+}
+

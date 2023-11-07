@@ -20,10 +20,10 @@ const run = async () => {
 
     await serviceConsumer.rentService(consumer);
     //
-    // for (let i = 0; i < 5000; i++) {
-        clock.tick(5000);
+    for (let i = 0; i < 6000; i++) {
+        clock.tick(1);
     //     //await clock.runAllAsync();
-    // }
+    }
 }
 
 run();

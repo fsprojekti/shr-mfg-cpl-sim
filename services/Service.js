@@ -10,6 +10,7 @@ exports.Service = Service;
 exports.create = (consumer) => {
     return new Promise((resolve, reject) => {
         try {
+            logger.silly("serviceService.create() called with consumer: "+ consumer._id);
             //Get number of services of consumer
             let count = Service.find({idConsumer: consumer._id}).length;
             let service = Service.create({
@@ -17,6 +18,7 @@ exports.create = (consumer) => {
                 duration: config.service.duration,
                 count: count
             }).save();
+            logger.info("serviceService.create() created service: "+service._id);
             resolve(service);
         } catch (e) {
             reject(e);
@@ -79,7 +81,6 @@ exports.commence = (service) => {
 exports.complete = (service) => {
     return new Promise(async (resolve, reject) => {
         try {
-            logger.warn("Consumer event 44444 " + Math.floor(Date.now()));
             logger.info("serviceService.complete() called with service: "+ service._id);
             //Reject if service not in state ACTIVE
             if (service.state !== "ACTIVE") reject("Service not in state ACTIVE");
@@ -87,7 +88,6 @@ exports.complete = (service) => {
             logger.verbose("serviceService.complete() service state set to DONE: "+service._id);
             emitter.emit('serviceCompleted', service);
             await service.save();
-
             resolve(service);
         } catch (e) {
             reject(e);
@@ -117,19 +117,17 @@ exports.getOfferDirectMarket = (service) => {
     })
 }
 
-//Event offer direct expired and rejected
+//Event offer direct expired
 emitter.on('offerDirectExpired', (offerDirect) => {
     return new Promise(async (resolve, reject) => {
         try {
+            logger.debug("Event ON offerDirectExpired with offerDirect: "+offerDirect._id);
             //Get service of offer direct
             let service = await Service.findOne({_id: offerDirect.idService});
             //Reject if service not found
             if (!service) reject("Service not found");
-            //Set state to OFFER_EXPIRED
-            service.state = "OFFER_EXPIRED";
-            await service.save();
-            //Put service on market with new offer
-            await this.market(service, await clcPrice(service), await clcExpiryTimestamp(service), await clcProvider(service));
+            //continue with renting service
+            await this.rent(service, await clcPrice(service), await clcExpiryTimestamp(service), await clcProvider(service));
             //Get new offer direct
             let offer = await this.getOfferDirectMarket(service);
             resolve(offer);
@@ -142,15 +140,13 @@ emitter.on('offerDirectExpired', (offerDirect) => {
 emitter.on('offerDirectRejected', (offerDirect) => {
     return new Promise(async (resolve, reject) => {
         try {
+            logger.debug("Event ON offerDirectRejected with offerDirect: "+offerDirect._id);
             //Get service of offer direct
             let service = await Service.findOne({_id: offerDirect.idService});
             //Reject if service not found
             if (!service) reject("Service not found");
-            //Set state to OFFER_REJECTED
-            service.state = "OFFER_REJECTED";
-            await service.save();
             //Put service on market with new offer
-            await this.market(service, await clcPrice(service), await clcExpiryTimestamp(service), await clcProvider(service));
+            await this.rent(service, await clcPrice(service), await clcExpiryTimestamp(service), await clcProvider(service));
             //Get new offer direct
             let offer = await this.getOfferDirectMarket(service);
             resolve(offer);
