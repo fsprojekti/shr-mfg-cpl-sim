@@ -1,23 +1,25 @@
-const {Provider} = require('../models/Provider');
+const Provider = require('../models/Provider');
 
 exports.Provider = Provider;
 
 const serviceService = require("./Service");
 const serviceConsumer = require("./Consumer");
 
-exports.create = (account) => {
-    return new Promise(async (resolve, reject) => {
+exports.create = async (account) => {
         try {
+            logger.silly("serviceProvider.create() called with: accountId: " + account.id);
             //Reject if account not defined
-            if (!account) reject("Account not defined");
-            let provider = Provider.create({
-                idAccount: account._id,
-            }).save();
-            resolve(provider);
+            if (!account) throw ("Account not defined");
+            let provider = new Provider({
+                account: account.id,
+            });
+            await provider.save();
+            logger.info("serviceProvider.create() created provider with providerId: " + provider.id);
+            return provider;
         } catch (e) {
-            reject(e);
+            logger.error("serviceProvider.create() error: " + e);
+            throw e;
         }
-    })
 }
 
 const logger = require('../utils/logger');

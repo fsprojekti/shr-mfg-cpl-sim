@@ -1,5 +1,5 @@
 const config = require('../config.json');
-const {Consumer} = require('../models/Consumer');
+const Consumer = require('../models/Consumer');
 const emitter = require('../utils/events').eventEmitter;
 
 
@@ -11,22 +11,21 @@ const logger = require('../utils/logger');
 
 exports.Consumer = Consumer;
 
-exports.create = (account) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            logger.silly("serviceCustomer.create() called with: accountId: " + account._id);
-            //Reject if account not defined
-            if (!account) reject("Account not defined");
-            let consumer = Consumer.create({
-                idAccount: account._id,
-            }).save();
-            logger.silly("serviceCustomer.create() called: consumerId" + consumer._id);
-            resolve(consumer);
-        } catch (e) {
-            logger.error("serviceCustomer.create() error: " + e);
-            reject(e);
-        }
-    })
+exports.create = async (account) => {
+    try {
+        logger.silly("serviceCustomer.create() called with: accountId: " + account.id);
+        //Reject if account not defined
+        if (!account) throw ("Account not defined");
+        let consumer = new Consumer({
+            account: account.id,
+        });
+        await consumer.save();
+        logger.info("serviceCustomer.create() created consumer with consumerId: " + consumer.id);
+        return consumer;
+    } catch (e) {
+        logger.error("serviceCustomer.create() error: " + e);
+        throw e;
+    }
 }
 
 exports.rentService = (consumer) => {
@@ -48,7 +47,7 @@ exports.rentService = (consumer) => {
                     let offerDirect = await serviceOfferDirect.OfferDirect.findOne({idService: service._id});
                     if (offerDirect.state === "MARKET") reject("Last offer direct is in state MARKET");
                 }
-                if (service.state==="DONE"){
+                if (service.state === "DONE") {
                     logger.silly("serviceCustomer.rentService() no service found for consumer: " + consumer._id);
                     service = await serviceService.create(consumer);
                 }

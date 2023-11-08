@@ -1,12 +1,12 @@
-const DbLocal = require("db-local");
-const config = require("../config.json");
-const {Schema} = new DbLocal({path: config.db});
+const {mongoose} = require('mongoose');
 
-exports.Consumer = Schema("Consumers", {
+const consumerSchema=new mongoose.Schema( {
     //Cross-reference to Account schema
-    idAccount: {type: String, required: true},
+    idAccount: {type: mongoose.Schema.Types.ObjectId, ref: 'Account'},
     //Cross-reference to Service schema
-    idServices: [{type: String, ref: 'Service'}],
-},);
+    services: [{type: mongoose.Schema.Types.ObjectId, ref: 'Service'}],
+});
+
+module.exports = mongoose.model('Consumer', consumerSchema);
 
 

@@ -1,4 +1,4 @@
-const {OfferDirect} = require('../models/OfferDirect');
+const OfferDirect = require('../models/OfferDirect');
 const emitter = require('../utils/events').eventEmitter;
 
 exports.OfferDirect = OfferDirect;

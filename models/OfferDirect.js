@@ -1,10 +1,8 @@
-const DbLocal = require("db-local");
-const config = require("../config.json");
-const {Schema} = new DbLocal({path: config.db});
+const mongoose = require('mongoose');
 
-exports.OfferDirect = Schema("OffersDirect", {
-    idAccountSeller: {type: String, required: true},
-    idAccountBuyer: {type: String},
+const offerDirectSchema = new mongoose.Schema({
+    seller: {type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true},
+    buyer: {type: mongoose.Schema.Types.ObjectId, ref: 'Account'},
     price: {type: Number, required: true},
     expiryTimestamp: {type: Number},
     //states ["IDLE", "MARKET", "EXPIRED", "ACCEPTED", "REJECTED"]
@@ -12,5 +10,7 @@ exports.OfferDirect = Schema("OffersDirect", {
     //Index of offer direct
     count: {type: Number, required: true},
     //Cross-reference to Service schema
-    idService: {type: String, required: true},
+    service: {type: mongoose.Schema.Types.ObjectId, ref: 'Service', required: true}
 })
+
+module.exports = mongoose.model('OfferDirect', offerDirectSchema);

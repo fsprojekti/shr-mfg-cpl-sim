@@ -1,12 +1,10 @@
-const DbLocal = require("db-local");
-const config = require("../config.json");
-const {Schema} = new DbLocal({path: config.db});
+const mongoose = require("mongoose");
 
-exports.Service = Schema("Services", {
+const serviceSchema = new mongoose.Schema( {
     //States ["IDLE", "MARKET","ACTIVE", "DONE"]
     state: {type: String, default: "IDLE"},
     //Cross-reference to Offer schema
-    idOffers: [{type: String}],
+    offers: [{type: mongoose.Schema.Types.ObjectId, ref: 'OfferDirect'}],
     //Start service timestamp
     startTimestamp: {type: Number},
     //End service timestamp
@@ -14,9 +12,11 @@ exports.Service = Schema("Services", {
     //Duration in seconds default to 1 hour
     duration: {type: Number, default: 3600},
     //Service consumer id
-    idConsumer: {type: String, required: true},
+    consumer: {type: mongoose.Schema.Types.ObjectId, ref: 'Consumer', required: true},
     //Service provider id
-    idProvider: {type: String},
+    idProvider: {type: mongoose.Schema.Types.ObjectId, ref: 'Provider'},
     //Count
     count: {type: Number, default: 0},
-},);
+});
+
+module.exports = mongoose.model('Service', serviceSchema);

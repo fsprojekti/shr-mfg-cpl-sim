@@ -1,4 +1,4 @@
-const {Service} = require('../models/Service');
+const Service = require('../models/Service');
 const emitter = require('../utils/events').eventEmitter;
 const serviceOffer = require("./OfferDirect");
 const serviceProvider = require("./Provider");
