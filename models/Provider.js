@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const config = require("../config");
 
 const providerSchema =new mongoose.Schema( {
         //Cross-reference to Account schema
@@ -6,7 +7,7 @@ const providerSchema =new mongoose.Schema( {
         //Cross-reference to Service schema
         services: [{type: mongoose.Schema.Types.ObjectId, ref: 'Service'}],
         //Max services
-        servicesLimit: {type: Number, default: 5},
+        servicesLimit: {type: Number, default: config.provider.servicesLimit},
     });
 
 module.exports = mongoose.model('Provider', providerSchema);

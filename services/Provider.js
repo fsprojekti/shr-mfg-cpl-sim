@@ -40,7 +40,7 @@ exports.offerDirectReceive = (offerDirect) => {
             //Reject if provider not found
             if (!provider) throw("Provider not found");
             //Get current number of services with state ACTIVE
-            let count = await serviceService.Service.find({idProvider: provider._id, state: "ACTIVE"}).length;
+            let count = await serviceService.Service.find({provider: provider._id, state: "ACTIVE"}).length;
             logger.silly("serviceProvider.offerDirectReceived() number of active services: " + count);
             //Reject if count >= maxServices
             if (count >= provider.servicesLimit) {
