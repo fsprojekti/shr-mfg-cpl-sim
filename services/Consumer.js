@@ -2,7 +2,6 @@ const config = require('../config.json');
 const Consumer = require('../models/Consumer');
 const emitter = require('../utils/events').eventEmitter;
 
-
 const serviceService = require("./Service");
 const serviceProvider = require("./Provider");
 const serviceOfferDirect = require("./OfferDirect");
@@ -11,33 +10,33 @@ const logger = require('../utils/logger');
 
 exports.Consumer = Consumer;
 
-exports.create = async (account) => {
-    try {
-        logger.silly("serviceCustomer.create() called with: accountId: " + account.id);
-        //Reject if account not defined
-        if (!account) throw ("Account not defined");
-        let consumer = new Consumer({
-            account: account.id,
-        });
-        await consumer.save();
-        logger.info("serviceCustomer.create() created consumer with consumerId: " + consumer.id);
-        return consumer;
-    } catch (e) {
-        logger.error("serviceCustomer.create() error: " + e);
-        throw e;
-    }
+exports.create = (account) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            logger.silly("serviceCustomer.create() called with: accountId: " + account.id);
+            //Reject if account not defined
+            if (!account) throw ("Account not defined");
+            let consumer = new Consumer({
+                account: account.id,
+            });
+            await consumer.save();
+            logger.info("serviceCustomer.create() created consumer with consumerId: " + consumer.id);
+            resolve(consumer);
+        } catch (e) {
+            logger.error("serviceCustomer.create() error: " + e);
+            reject(e);
+        }
+    })
 }
 
 exports.rentService = (consumer) => {
     return new Promise(async (resolve, reject) => {
         try {
-            logger.silly("serviceCustomer.rentService() called with: consumerId:  " + consumer._id);
+            logger.silly("serviceConsumer.rentService() called with: consumerId:  " + consumer._id);
             //Reject if consumer not defined
             if (!consumer) reject("Consumer not defined");
             //Find services of consumer and sort by count from highest to lowest
-            let service = serviceService.Service.find({idConsumer: consumer._id}).sort((a, b) => {
-                return b.count - a.count
-            })[0];
+            let service = await serviceService.Service.find({consumer: consumer.id}).sort({count: -1}).limit(1)[0];
             if (service) {
                 //Reject if last service is in state ACTIVE
                 if (service.state === "ACTIVE") reject("Last service is in state ACTIVE");
@@ -48,29 +47,46 @@ exports.rentService = (consumer) => {
                     if (offerDirect.state === "MARKET") reject("Last offer direct is in state MARKET");
                 }
                 if (service.state === "DONE") {
-                    logger.silly("serviceCustomer.rentService() no service found for consumer: " + consumer._id);
+                    logger.silly("serviceConsumer.rentService() no service found for consumer: " + consumer._id);
                     service = await serviceService.create(consumer);
                 }
             } else {
-                logger.silly("serviceCustomer.rentService() no service found for consumer: " + consumer._id);
+                logger.silly("serviceConsumer.rentService() no service found for consumer: " + consumer._id);
                 service = await serviceService.create(consumer);
             }
             // Calculate price
             let price = await clcOfferPrice(service);
-            logger.debug("serviceCustomer.rentService() calculated price: " + price);
+            logger.debug("serviceConsumer.rentService() calculated price: " + price);
             // Calculate expiry timestamp
             let expiryTimestamp = await clcOfferDuration(service) + Math.floor(Date.now() / 1000);
-            logger.debug("serviceCustomer.rentService() calculated expiryTimestamp: " + expiryTimestamp);
+            logger.debug("serviceConsumer.rentService() calculated expiryTimestamp: " + expiryTimestamp);
             // Calculate offer provider
             let provider = await clcOfferProvider(service);
-            logger.debug("serviceCustomer.rentService() calculated provider: " + provider._id);
+            logger.debug("serviceConsumer.rentService() calculated provider: " + provider._id);
 
-            //Rent service
-            logger.silly("serviceCustomer.rentService() renting service: " + service._id);
-            let offerDirect = await serviceService.rent(service, price, expiryTimestamp, provider);
-            resolve(offerDirect);
+            //Create direct offer
+            logger.silly("serviceConsumer.rentService() creating offer direct");
+            let offer = await serviceOfferDirect.create(service, price, expiryTimestamp);
+            logger.silly("serviceConsumer.rentService() created offer direct: " + offer.id);
+            service.offers.push(offer.id);
+            //Set state to MARKET
+            service.state = "MARKET";
+            await service.save();
+            logger.verbose("serviceConsumer.rentService() service state set to MARKET: " + service._id);
+            //Send to provider
+            offer.buyer = provider.account;
+            offer.state = "MARKET";
+            await offer.save();
+            logger.verbose("serviceConsumer.rentService() offer direct state set to MARKET: " + offer._id);
+            //Send offer to provider
+            await serviceProvider.offerDirectReceive(offer);
+            logger.silly("serviceConsumer.rentService() offer direct sent to provider: " + offer._id);
+            //Commence offer direct (start expiry timer)
+            await serviceOfferDirect.commence(offer);
+            logger.silly("serviceConsumer.rentService() offer direct commenced: " + offer._id);
+            resolve(service);
         } catch (e) {
-            logger.error("serviceCustomer.rentService() error: " + e);
+            logger.error("serviceConsumer.rentService() error: " + e);
             reject(e);
         }
     })
@@ -79,24 +95,22 @@ exports.rentService = (consumer) => {
 exports.offerDirectAccepted = (offerDirect) => {
     return new Promise(async (resolve, reject) => {
         try {
-            logger.silly("serviceCustomer.offerDirectAccepted() called with offerDirect: " + offerDirect._id);
+            logger.silly("serviceConsumer.offerDirectAccepted() called with offerDirect: " + offerDirect._id);
             //Reject if offer not defined
             if (!offerDirect) reject("Offer not defined");
             //Reject if offer not in state MARKET
             if (offerDirect.state !== "MARKET") reject("Offer not in state MARKET");
-            //Get account from offer direct
-            let account = await serviceAccount.Account.findOne({_id: offerDirect.idAccountSeller});
             //Get consumer of service
-            let consumer = await Consumer.findOne({idAccount: account._id});
+            let consumer = await Consumer.findOne({account: offerDirect.seller});
             //Reject if consumer not found
             if (!consumer) reject("Consumer not found to rent service");
             //Change state of offer direct to ACCEPTED
             offerDirect.state = "ACCEPTED";
             await offerDirect.save();
-            logger.verbose("serviceCustomer.offerDirectAccepted() offer direct state set to ACCEPTED: " + offerDirect._id);
+            logger.verbose("serviceConsumer.offerDirectAccepted() offer direct state set to ACCEPTED: " + offerDirect._id);
             resolve(offerDirect);
         } catch (e) {
-            logger.error("serviceCustomer.offerDirectAccepted() error: " + e);
+            logger.error("serviceConsumer.offerDirectAccepted() error: " + e);
             reject(e);
         }
     })
@@ -106,7 +120,7 @@ exports.offerDirectAccepted = (offerDirect) => {
 exports.offerDirectRejected = (offerDirect) => {
     return new Promise(async (resolve, reject) => {
         try {
-            logger.silly("serviceCustomer.offerDirectRejected() called with offerDirect: " + offerDirect._id);
+            logger.silly("serviceConsumer.offerDirectRejected() called with offerDirect: " + offerDirect._id);
             //Reject if offer not defined
             if (!offerDirect) reject("Offer not defined");
             //Reject if offer not in state MARKET
@@ -118,9 +132,9 @@ exports.offerDirectRejected = (offerDirect) => {
             //Change state of offer direct to REJECTED
             offerDirect.state = "REJECTED";
             await offerDirect.save();
-            logger.verbose("serviceCustomer.offerDirectRejected() offer direct state set to REJECTED: " + offerDirect._id);
+            logger.verbose("serviceConsumer.offerDirectRejected() offer direct state set to REJECTED: " + offerDirect._id);
             //Rent service again
-            logger.silly("serviceCustomer.offerDirectRejected() renting service again: " + offerDirect._id);
+            logger.silly("serviceConsumer.offerDirectRejected() renting service again: " + offerDirect._id);
             await this.rentService(consumer);
             resolve(offerDirect);
         } catch (e) {
@@ -128,6 +142,28 @@ exports.offerDirectRejected = (offerDirect) => {
         }
     })
 
+}
+
+exports.serviceCompleted = (service) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            logger.silly("serviceConsumer.serviceCompleted() called with service: " + service._id);
+            //Reject if service not defined
+            if (!service) reject("Service not defined");
+            //Reject if service not in state DONE
+            if (service.state !== "DONE") reject("Service not in state DONE");
+            //Get consumer of service
+            let consumer = await Consumer.findOne({_id: service.consumer});
+            //Reject if consumer not found
+            if (!consumer) reject("Consumer not found to rent service");
+            //Rent service again
+            logger.silly("serviceConsumer.serviceCompleted() renting service again: " + service._id);
+            await this.rentService(consumer);
+            resolve(service);
+        } catch (e) {
+            reject(e);
+        }
+    })
 }
 
 let clcOfferPrice = (service) => {

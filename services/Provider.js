@@ -5,37 +5,40 @@ exports.Provider = Provider;
 const serviceService = require("./Service");
 const serviceConsumer = require("./Consumer");
 
-exports.create = async (account) => {
+const logger = require('../utils/logger');
+
+exports.create = (account) => {
+    return new Promise(async (resolve, reject) => {
         try {
             logger.silly("serviceProvider.create() called with: accountId: " + account.id);
             //Reject if account not defined
             if (!account) throw ("Account not defined");
             let provider = new Provider({
-                account: account.id,
+                account: account._id,
             });
             await provider.save();
             logger.info("serviceProvider.create() created provider with providerId: " + provider.id);
-            return provider;
+            resolve(provider);
         } catch (e) {
             logger.error("serviceProvider.create() error: " + e);
-            throw e;
+            reject(e);
         }
+    })
 }
 
-const logger = require('../utils/logger');
 
-exports.offerDirectReceived = (offerDirect) => {
+exports.offerDirectReceive = (offerDirect) => {
     return new Promise(async (resolve, reject) => {
         try {
             logger.silly("serviceProvider.offerDirectReceived() called with offerDirect: " + offerDirect._id);
             //Reject if offer not defined
-            if (!offerDirect) reject("Offer not defined");
+            if (!offerDirect) throw ("Offer not defined");
             //Reject if offer not in state MARKET
-            if (offerDirect.state !== "MARKET") reject("Offer not in state MARKET");
+            if (offerDirect.state !== "MARKET") throw ("Offer not in state MARKET");
             //Get provider
-            let provider = await Provider.findOne({idAccount: offerDirect.idBuyer});
+            let provider = await Provider.findOne({account: offerDirect.buyer});
             //Reject if provider not found
-            if (!provider) reject("Provider not found");
+            if (!provider) throw("Provider not found");
             //Get current number of services with state ACTIVE
             let count = await serviceService.Service.find({idProvider: provider._id, state: "ACTIVE"}).length;
             logger.silly("serviceProvider.offerDirectReceived() number of active services: " + count);
@@ -49,7 +52,7 @@ exports.offerDirectReceived = (offerDirect) => {
                 offerDirect = await serviceConsumer.offerDirectAccepted(offerDirect);
                 logger.silly("serviceProvider.offerDirectReceived() accepted offer direct: " + offerDirect._id);
                 //Get service
-                let service = await serviceService.Service.findOne({_id: offerDirect.idService});
+                let service = await serviceService.Service.findById(offerDirect.service);
                 //Commence service
                 logger.silly("serviceProvider.offerDirectReceived() commence service: " + service._id);
                 await serviceService.commence(service);

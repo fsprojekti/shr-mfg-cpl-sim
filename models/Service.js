@@ -14,7 +14,7 @@ const serviceSchema = new mongoose.Schema( {
     //Service consumer id
     consumer: {type: mongoose.Schema.Types.ObjectId, ref: 'Consumer', required: true},
     //Service provider id
-    idProvider: {type: mongoose.Schema.Types.ObjectId, ref: 'Provider'},
+    provider: {type: mongoose.Schema.Types.ObjectId, ref: 'Provider'},
     //Count
     count: {type: Number, default: 0},
 });

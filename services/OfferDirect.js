@@ -3,101 +3,53 @@ const emitter = require('../utils/events').eventEmitter;
 
 exports.OfferDirect = OfferDirect;
 
-const serviceAccount = require("./Account");
-const serviceProvider = require("./Provider");
 const serviceConsumer = require("./Consumer");
 
 const logger = require('../utils/logger');
 
+
+
 exports.create = (service, price, expiryTimestamp) => {
-    return new Promise( (resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         try {
-            logger.silly("serviceOfferDirect.create() called with service: " + service._id + " price: " + price + " expiryTimestamp: " + expiryTimestamp);
-            let count = OfferDirect.find({idService: service._id}).length;
+            logger.silly("serviceOfferDirect.create() called with service: " + service.id + " price: " + price + " expiryTimestamp: " + expiryTimestamp);
+            let count = await OfferDirect.countDocuments({service: service.id});
             //Get consumer
-            let consumer = serviceConsumer.Consumer.findOne({_id:service.idConsumer});
-            let offerDirect = OfferDirect.create({
-                idAccountSeller: consumer.idAccount,
-                idService: service._id,
+            let consumer = await serviceConsumer.Consumer.findById(service.consumer);
+            let offerDirect = new OfferDirect({
+                seller: consumer.account,
+                service: service.id,
                 price: price,
                 expiryTimestamp: expiryTimestamp,
                 count: count
-            }).save();
-            logger.info("serviceOfferDirect.create() created offer direct: " + offerDirect._id);
+            });
+            logger.info("serviceOfferDirect.create() created offer direct: " + offerDirect.id);
             resolve(offerDirect);
         } catch (e) {
+            logger.error("serviceOfferDirect.create() error: " + e);
             reject(e);
         }
     })
 }
 
-exports.send = (offerDirect, provider) => {
+exports.commence = (offerDirect) => {
     return new Promise(async (resolve, reject) => {
         try {
-            logger.silly("serviceOfferDirect.send() called with offerDirect: " + offerDirect._id + " provider: " + provider._id);
-            //Reject if offer not in state IDLE
-            if (offerDirect.state !== "IDLE") reject("Offer not in state IDLE");
-            //Reject if provider not defined
-            if (!provider) reject("Provider not defined");
-            offerDirect.idBuyer = provider.idAccount;
-            logger.silly("serviceOfferDirect.send() offerDirect idBuyer set to provider idAccount: " + offerDirect.idBuyer);
-            offerDirect.state = "MARKET";
-            logger.verbose("serviceOfferDirect.send() offerDirect state set to MARKET: " + offerDirect.state);
-            await offerDirect.save();
-            //Send offer to provider
-            logger.silly("serviceOfferDirect.send() sending offer direct to provider:" + offerDirect._id);
-            await serviceProvider.offerDirectReceived(offerDirect);
-            logger.silly("serviceOfferDirect.send() sent offer direct to provider:" + offerDirect._id);
-            //Start expiry timer
-            logger.silly("serviceOfferDirect.send() starting expiry timer for offer direct:" + offerDirect._id);
+            logger.silly("serviceOfferDirect.commence() called with offerDirect: " + offerDirect.id);
             setTimeout(async () => {
-                //logger.info("serviceOfferDirect.send() expiry timer expired for offer direct:" + offerDirect._id);
                 //Check if offer is in state ACCEPTED or REJECTED
-                if (offerDirect.state === "ACCEPTED") {
-                    //logger.silly("serviceOfferDirect.send() offer direct state is ACCEPTED: " + offerDirect._id);
-                    return
-                }
-                if (offerDirect.state === "REJECTED") {
-                    //0logger.silly("serviceOfferDirect.send() offer direct state is REJECTED: " + offerDirect._id);
-                    return
-                }
+                if (offerDirect.state === "ACCEPTED") return
+                if (offerDirect.state === "REJECTED") return
                 offerDirect.state = "EXPIRED";
                 await offerDirect.save();
-                logger.verbose("serviceOfferDirect.send() offer direct state set to EXPIRED: " + offerDirect._id);
+                logger.verbose("serviceOfferDirect.commence() offer direct state set to EXPIRED: " + offerDirect.id);
                 //Emit event offerDirectExpired
                 emitter.emit('offerDirectExpired', offerDirect);
-            }, offerDirect.expiryTimestamp - Math.floor(Date.now() / 1000))
-            resolve(offerDirect)
+            })
+            resolve(offerDirect);
         } catch (e) {
+            logger.error("serviceOfferDirect.commence() error: " + e);
             reject(e);
         }
     })
 }
-
-//Events
-emitter.on('offerDirectAccepted', async (offerDirect) => {
-    try {
-        console.log("offerDirectSend");
-        console.log(offerDirect);
-    } catch (e) {
-        console.log(e);
-    }
-});
-
-emitter.on('offerDirectRejected', async (offerDirect) => {
-    try {
-        console.log("offerDirectReject");
-        console.log(offerDirect);
-    } catch (e) {
-        console.log(e);
-    }
-});
-
-emitter.on('offerDirectExpired', async (offerDirect) => {
-    try {
-        console.log("offerDirectExpired");
-        console.log(offerDirect);
-    } catch (e) {
-        console.log(e);
-    }
-});
