@@ -27,7 +27,7 @@ mongoose.connect(config.db.url).then(async () => {
 
         await serviceConsumer.rentService(consumer);
         //
-        for (let i = 0; i < 6000; i++) {
+        for (let i = 0; i < 18000; i++) {
             await clock.tickAsync(1);
             //Flush all promises in queue
             await Promise.all(promises);
