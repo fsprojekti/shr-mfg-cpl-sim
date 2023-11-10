@@ -7,6 +7,7 @@ const serviceProvider = require("./Provider");
 const serviceOfferDirect = require("./OfferDirect");
 const serviceAccount = require("./Account");
 const logger = require('../utils/logger');
+const {promises} = require("../utils/events");
 
 exports.Consumer = Consumer;
 
@@ -58,7 +59,7 @@ exports.rentService = (consumer) => {
             let price = await clcOfferPrice(service);
             logger.debug("serviceConsumer.rentService() calculated price: " + price);
             // Calculate expiry timestamp
-            let expiryTimestamp = (await clcOfferDuration(service)) +Date.now();
+            let expiryTimestamp = (await clcOfferDuration(service)) + Date.now();
             logger.debug("serviceConsumer.rentService() calculated expiryTimestamp: " + expiryTimestamp);
             // Calculate offer provider
             let provider = await clcOfferProvider(service);
@@ -126,16 +127,19 @@ exports.offerDirectRejected = (offerDirect) => {
             //Reject if offer not in state MARKET
             if (offerDirect.state !== "MARKET") reject("Offer not in state MARKET");
             //Get consumer of service
-            let consumer = await Consumer.findOne({_id: offerDirect.idBuyer});
+            let consumer = await Consumer.findOne({account: offerDirect.seller});
             //Reject if consumer not found
             if (!consumer) reject("Consumer not found to rent service");
             //Change state of offer direct to REJECTED
             offerDirect.state = "REJECTED";
             await offerDirect.save();
             logger.verbose("serviceConsumer.offerDirectRejected() offer direct state set to REJECTED: " + offerDirect._id);
-            //Rent service again
-            logger.silly("serviceConsumer.offerDirectRejected() renting service again: " + offerDirect._id);
-            await this.rentService(consumer);
+            //Timout for 100 units
+            setTimeout(async () => {
+                //Rent service again
+                logger.silly("serviceConsumer.offerDirectRejected() renting service again: " + offerDirect._id);
+                promises.push(this.rentService(consumer));
+            }, 100);
             resolve(offerDirect);
         } catch (e) {
             reject(e);
