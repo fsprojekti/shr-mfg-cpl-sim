@@ -38,25 +38,28 @@ exports.offerDirectReceive = (offerDirect) => {
             //Get provider
             let provider = await Provider.findOne({account: offerDirect.buyer});
             //Reject if provider not found
-            if (!provider) throw("Provider not found");
-            //Get current number of services with state ACTIVE
-            let count = await serviceService.Service.find({provider: provider._id, state: "ACTIVE"}).length;
-            logger.silly("serviceProvider.offerDirectReceived() number of active services: " + count);
-            //Reject if count >= maxServices
-            if (count >= provider.servicesLimit) {
-                logger.silly("serviceProvider.offerDirectReceived() reject offer direct: " + offerDirect._id);
-                offerDirect = await serviceConsumer.offerDirectRejected(offerDirect);
-                logger.silly("serviceProvider.offerDirectReceived() rejected offer direct: " + offerDirect._id);
-            } else {
-                logger.silly("serviceProvider.offerDirectReceived() accept offer direct: " + offerDirect._id);
-                offerDirect = await serviceConsumer.offerDirectAccepted(offerDirect);
-                logger.silly("serviceProvider.offerDirectReceived() accepted offer direct: " + offerDirect._id);
-                //Get service
-                let service = await serviceService.Service.findById(offerDirect.service);
-                //Commence service
-                logger.silly("serviceProvider.offerDirectReceived() commence service: " + service._id);
-                await serviceService.commence(service);
-                logger.silly("serviceProvider.offerDirectReceived() commenced service: " + service._id);
+            if (!provider) throw ("Provider not found");
+
+            let decision = await decisionOfferDirect(provider, offerDirect);
+            switch (decision) {
+                case "accept":{
+                    offerDirect = await serviceConsumer.offerDirectAccepted(offerDirect);
+                    logger.silly("serviceProvider.offerDirectReceived() accepted offer direct: " + offerDirect.id);
+                    //Get service
+                    let service = await serviceService.Service.findById(offerDirect.service);
+                    //Commence service
+                    logger.silly("serviceProvider.offerDirectReceived() commence service: " + service.id);
+                    await serviceService.commence(service);
+                    logger.silly("serviceProvider.offerDirectReceived() commenced service: " + service.id);
+                }
+                    break;
+                case "reject":{
+                    offerDirect = await serviceConsumer.offerDirectRejected(offerDirect);
+                    logger.silly("serviceProvider.offerDirectReceived() rejected offer direct: " + offerDirect._id);
+                }
+                    break;
+                case "postpone":{}
+                    break;
             }
             resolve(offerDirect);
         } catch (e) {
@@ -66,3 +69,46 @@ exports.offerDirectReceive = (offerDirect) => {
     })
 }
 
+
+let decisionOfferDirect = (provider, offerDirect) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            logger.silly("serviceProvider.decisionOfferDirect() called with offerDirect: " + offerDirect._id);
+            // Randomly accept or reject or postpone offer direct
+            let random = Math.random();
+            let decision = chooseOutcome(0.5, 0.1, 0.4);
+            if (decision === "accept"){
+                //Check the availability of the provider capacities
+                //Get current number of services with state ACTIVE
+                let count = await serviceService.Service.countDocuments({provider: provider._id, state: "ACTIVE"});
+                if (count >= provider.servicesLimit) {
+                    logger.silly("serviceProvider.decisionOfferDirect() provider capacity reached: " + provider._id);
+                    decision = "reject";
+                }
+            }
+            resolve(decision);
+        } catch (e) {
+            logger.error("serviceProvider.decisionOfferDirect() error: " + e);
+            reject(e);
+        }
+    })
+}
+
+let chooseOutcome = (acceptProbability, rejectProbability, postponeProbability) => {
+    // Ensure the sum of probabilities is 1
+    if (acceptProbability + rejectProbability + postponeProbability !== 1) {
+        return 'Error: Probabilities must sum up to 1';
+    }
+
+    // Generate a random number between 0 and 1
+    const randomNumber = Math.random();
+
+    // Determine the outcome based on the probabilities
+    if (randomNumber < acceptProbability) {
+        return 'accept';
+    } else if (randomNumber < acceptProbability + rejectProbability) {
+        return 'reject';
+    } else {
+        return 'postpone';
+    }
+}

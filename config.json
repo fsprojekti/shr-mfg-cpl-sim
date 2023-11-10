@@ -1,5 +1,8 @@
 {
-  "db":  "./db",
+  "db": {
+    "url": "mongodb+srv://markocorn:W8jEFmsFKwBvK1W4@cluster0.olmvpgs.mongodb.net/?retryWrites=true&w=majority",
+    "name": "test"
+  },
   "agentConsumer": {
     "count": 1,
     "settingsOffer": {
@@ -10,11 +13,9 @@
   "service": {
     "duration" : 1000
   },
-  "agentProvider": {
+  "provider": {
     "count": 1,
-    "settings": {
-      "slotsCount": 10
-    }
+    "servicesLimit": 1
   },
   "mode": "silly"
 }

@@ -1,17 +1,27 @@
-const config = require('./config.json');
+/**
+ * Test 1
+ *
+ * Number of consumers: 1
+ * Number of providers: 1
+ * Time of simulation: 10000 units
+ *
+ * Provider random offerDirect response [accept/reject/expire]
+ */
+
+const config = require('../config.json');
 
 const {mongoose} = require('mongoose');
 
 const FakeTimers = require("@sinonjs/fake-timers");
 const clock = FakeTimers.install();
 
-const serviceAccount = require('./services/Account');
-const serviceConsumer = require('./services/Consumer');
-const serviceProvider = require('./services/Provider');
-const serviceOfferDirect = require('./services/OfferDirect');
-const serviceService = require('./services/Service');
+const serviceAccount = require('../services/Account');
+const serviceConsumer = require('../services/Consumer');
+const serviceProvider = require('../services/Provider');
+const serviceOfferDirect = require('../services/OfferDirect');
+const serviceService = require('../services/Service');
 
-const {promises} = require('./utils/events')
+const {promises} = require('../utils/events')
 mongoose.connect(config.db.url).then(async () => {
     //Drop account collection
     try {
