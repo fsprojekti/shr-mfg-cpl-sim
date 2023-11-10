@@ -78,7 +78,7 @@ let decisionOfferDirect = (provider, offerDirect) => {
             logger.silly("serviceProvider.decisionOfferDirect() called with offerDirect: " + offerDirect._id);
             // Randomly accept or reject or postpone offer direct
             let random = Math.random();
-            let decision = chooseOutcome(0, 0, 1);
+            let decision = chooseOutcome(0.5, 0.1, 0.4);
             if (decision === "accept"){
                 //Check the availability of the provider capacities
                 //Get current number of services with state ACTIVE
