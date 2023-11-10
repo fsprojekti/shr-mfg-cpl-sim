@@ -16,7 +16,7 @@ exports.create = (consumer) => {
         try {
             logger.silly("serviceService.create() called with consumer: " + consumer.id);
             //Get number of services of consumer
-            let count = await Service.countDocuments({idConsumer: consumer.id});
+            let count = await Service.countDocuments({consumer: consumer.id});
             let service = new Service({
                 consumer: consumer.id,
                 duration: config.service.duration,

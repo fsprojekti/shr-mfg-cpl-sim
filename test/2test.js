@@ -1,9 +1,9 @@
 /**
  * Test 1
  *
- * Number of consumers: 1
+ * Number of consumers: 5
  * Number of providers: 1
- * Time of simulation: 10000 units
+ * Time of simulation: 20000 units
  *
  * Provider random offerDirect response [accept/reject/expire]
  */
@@ -33,9 +33,12 @@ mongoose.connect(config.db.url).then(async () => {
         await serviceOfferDirect.OfferDirect.deleteMany({});
 
         let consumer = await serviceConsumer.create(await serviceAccount.create());
+        let consumer2 = await serviceConsumer.create(await serviceAccount.create());
+
         let provider = await serviceProvider.create(await serviceAccount.create());
 
         await serviceConsumer.rentService(consumer);
+        await serviceConsumer.rentService(consumer2);
         //
         for (let i = 0; i < 10000; i++) {
             await clock.tickAsync(1);
