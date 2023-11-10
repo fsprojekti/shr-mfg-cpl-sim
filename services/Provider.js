@@ -58,7 +58,9 @@ exports.offerDirectReceive = (offerDirect) => {
                     logger.silly("serviceProvider.offerDirectReceived() rejected offer direct: " + offerDirect._id);
                 }
                     break;
-                case "postpone":{}
+                case "postpone":{
+                    logger.silly("serviceProvider.offerDirectReceived() postponed offer direct: " + offerDirect._id);
+                }
                     break;
             }
             resolve(offerDirect);
@@ -76,7 +78,7 @@ let decisionOfferDirect = (provider, offerDirect) => {
             logger.silly("serviceProvider.decisionOfferDirect() called with offerDirect: " + offerDirect._id);
             // Randomly accept or reject or postpone offer direct
             let random = Math.random();
-            let decision = chooseOutcome(0.0, 1.0, 0.0);
+            let decision = chooseOutcome(0, 0, 1);
             if (decision === "accept"){
                 //Check the availability of the provider capacities
                 //Get current number of services with state ACTIVE
