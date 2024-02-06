@@ -216,7 +216,9 @@ let clcOfferDuration = (service) => {
 let clcOfferProvider = (service) => {
     return new Promise(async (resolve, reject) => {
         try {
-            let provider = await serviceProvider.Provider.findOne();
+            let count = await serviceProvider.Provider.count();
+            let random = Math.floor(Math.random() * count);
+            let provider = await serviceProvider.Provider.findOne().skip(random);
             resolve(provider);
         } catch (e) {
             reject(e);
