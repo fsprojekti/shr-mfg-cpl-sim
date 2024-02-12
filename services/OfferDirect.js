@@ -14,15 +14,13 @@ exports.create = (service, price, expiryTimestamp) => {
     return new Promise(async (resolve, reject) => {
         try {
             logger.silly("serviceOfferDirect.create() called with service: " + service.id + " price: " + price + " expiryTimestamp: " + expiryTimestamp);
-            let count = await OfferDirect.countDocuments({service: service.id});
             //Get consumer
             let consumer = await serviceConsumer.Consumer.findById(service.consumer);
             let offerDirect = new OfferDirect({
                 seller: consumer.account,
                 service: service.id,
                 price: price,
-                expiryTimestamp: expiryTimestamp,
-                count: count
+                expiryTimestamp: expiryTimestamp
             });
             logger.info("serviceOfferDirect.create() created offer direct: " + offerDirect.id);
             resolve(offerDirect);

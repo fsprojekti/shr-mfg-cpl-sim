@@ -104,5 +104,63 @@ graph
 
 ```
 
+```mermaid
+sequenceDiagram
+    title provider accepts offer direct
+    Note over A:generate offer
+    A->>B:offerDirectReceive(offer)
+    Note over B:offer is accepted
+    B->>A: offerDirectAccepted(offerDirect)
+    Note over B:service in progress
+    B->>A: serviceCompleted(service)
+```
+
+```mermaid
+sequenceDiagram
+    title provider rejects offer direct
+    participant A as Consumer
+    participant B as Provider
+    participant C as Pool
+
+    Note over A:generate offer
+    A->>B:offerDirectReceive(offer)
+    Note over B:offer is rejected
+    B->>A: offerDirectRejected(offerDirect)
+```
+
+```mermaid
+sequenceDiagram
+    title provider forwards offer direct to pool
+    participant A as Consumer
+    participant B as Provider A
+    participant C as Pool
+    participant D as Provider B
+    Note over A: generate offer
+    A ->> B: offerDirectReceive(offer)
+    alt to pool
+        Note over B: generate offer capacity
+        B ->> C: offerCapacityPost(offerCapacity)
+        C -->> D: event new offer posted
+        Note over C: Offer capacity waiting to be picked by others
+        alt pulled by provider B
+            D ->> C: offerCapacityAccepted(offerCapacity)
+            Note over C: Pool remove offer capacity from market
+            C ->> B: offerCapacityAccepted(offerCapacity)
+            Note over B: offer is accepted
+            B ->> A: offerDirectAccepted(offerDirect)
+            Note over D: service in progress
+            D ->> B: serviceCompleted(service)
+            B ->> A: serviceCompleted(service)
+        else offer capacity expire
+            Note over B: offer capacity expires
+        end
+    else offer direct expire
+        Note over A: offer expires
+    end
+
+
+
+```
+
 
 
