@@ -17,5 +17,6 @@
     "count": 1,
     "servicesLimit": 1
   },
-  "mode": "silly"
+  "mode": "info",
+  "OPENAI_API_KEY": "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"
 }

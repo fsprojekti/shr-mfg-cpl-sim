@@ -4,8 +4,9 @@ exports.Provider = Provider;
 
 const serviceService = require("./Service");
 const serviceConsumer = require("./Consumer");
-
+const serviceAi = require("./Ai");
 const logger = require('../utils/logger');
+const resultWriter = require('../utils/resultWriter');
 
 exports.create = (account) => {
     return new Promise(async (resolve, reject) => {
@@ -36,11 +37,13 @@ exports.offerDirectReceive = (offerDirect) => {
             //Reject if offer not in state MARKET
             if (offerDirect.state !== "MARKET") throw ("Offer not in state MARKET");
             //Get provider
-            let provider = await Provider.findOne({account: offerDirect.buyer});
+            let provider = await Provider.findOne({account: offerDirect.buyer}).populate('account').exec();
             //Reject if provider not found
             if (!provider) throw ("Provider not found");
 
-            let decision = await decisionOfferDirect(provider, offerDirect);
+            const decision = provider.account.isAiAccount ? 
+                await serviceAi.makeOfferDecisionWithChatGpt(provider, offerDirect) 
+                : await decisionOfferDirect(provider, offerDirect);
             switch (decision) {
                 case "accept":{
                     offerDirect = await serviceConsumer.offerDirectAccepted(offerDirect);
@@ -63,6 +66,7 @@ exports.offerDirectReceive = (offerDirect) => {
                 }
                     break;
             }
+            resultWriter.appendToFile(offerDirect, decision, provider.account.isAiAccount)
             resolve(offerDirect);
         } catch (e) {
             logger.error("serviceProvider.offerDirectReceived() error: " + e);
@@ -78,7 +82,7 @@ let decisionOfferDirect = (provider, offerDirect) => {
             logger.silly("serviceProvider.decisionOfferDirect() called with offerDirect: " + offerDirect._id);
             // Randomly accept or reject or postpone offer direct
             let random = Math.random();
-            let decision = chooseOutcome(0.5, 0.1, 0.4);
+            let decision = chooseOutcome(0.5, 0.5, 0.0);
             if (decision === "accept"){
                 //Check the availability of the provider capacities
                 //Get current number of services with state ACTIVE
