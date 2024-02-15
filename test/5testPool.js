@@ -19,8 +19,12 @@ const serviceConsumer = require('../services/Consumer');
 const serviceProvider = require('../services/Provider');
 const serviceOfferDirect = require('../services/OfferDirect');
 const serviceService = require('../services/Service');
+const serviceOfferCapacity = require("../services/OfferCapacity");
+const servicePoolCapacity = require("../services/PoolCapacity");
 
 const {promises} = require('../utils/events')
+
+
 mongoose.connect(config.db.url).then(async () => {
     //Drop account collection
     try {
@@ -31,21 +35,30 @@ mongoose.connect(config.db.url).then(async () => {
         await serviceProvider.Provider.deleteMany({});
         await serviceOfferDirect.OfferDirect.deleteMany({});
         await serviceOfferCapacity.OfferCapacity.deleteMany({});
+        await servicePoolCapacity.PoolCapacity.deleteMany({});
 
         let providers = [];
-        for(let i = 0; i < 5; i++){
+        for(let i = 0; i < 2; i++){
             providers.push(await serviceProvider.create(await serviceAccount.create()));
         }
+
         let consumers = [];
-        for(let i = 0; i < 10; i++){
+        for(let i = 0; i < 1; i++){
            consumers.push(await serviceConsumer.create(await serviceAccount.create()));
         }
 
-        for(let i = 0; i < 10; i++){
-            await serviceConsumer.rentService(consumers[i]);
+        //Create a pool capacity
+        let poolCapacity = await servicePoolCapacity.create();
+        //Add providers to pool capacity
+        for(let provider of providers){
+            await servicePoolCapacity.addProvider(poolCapacity, provider);
         }
 
-        for (let i = 0; i < 10000; i++) {
+        for(let consumer of consumers){
+            await serviceConsumer.rentService(consumer);
+        }
+
+        for (let i = 0; i < 100000; i++) {
             await clock.tickAsync(1);
             //Flush all promises in queue
             await Promise.all(promises);

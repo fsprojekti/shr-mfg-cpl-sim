@@ -2,14 +2,17 @@ const logger = require("../utils/logger");
 const OfferCapacity = require("../models/OfferCapacity");
 const serviceAccount = require("./Account");
 
+
+exports.OfferCapacity = OfferCapacity;
+
 exports.create = (offerDirect, price, expiryTimestamp) => {
     return new Promise(async (resolve, reject) => {
         try {
             logger.silly("serviceOfferCapacity.create() called with offer direct: " + offerDirect.id + " price: " + price + " expiryTimestamp: " + expiryTimestamp);
             //Get buyer provider to which the offer direct was send
-            let buyer = await serviceAccount.findById(offerDirect.buyer);
+            let buyer = await serviceAccount.Account.findById(offerDirect.buyer);
             //Reject if fee is negative
-            if (offerDirect.price - price < 0) {
+            if (price - offerDirect.price < 0) {
                 reject("Fee cannot be negative");
             }
             //Reject if timestamp is greater than offer direct expiry timestamp
@@ -19,8 +22,9 @@ exports.create = (offerDirect, price, expiryTimestamp) => {
             let offerCapacity = new OfferCapacity({
                 seller: buyer,
                 price: price,
-                fee:offerDirect.price- price,
+                fee:price - offerDirect.price,
                 expiryTimestamp: expiryTimestamp,
+                offerDirect: offerDirect
             });
             logger.info("serviceOfferCapacity.create() created offer capacity: " + offerCapacity.id);
             resolve(offerCapacity);

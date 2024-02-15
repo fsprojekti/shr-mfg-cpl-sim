@@ -80,7 +80,7 @@ exports.rentService = (consumer) => {
             await offer.save();
             logger.verbose("serviceConsumer.rentService() offer direct state set to MARKET: " + offer._id);
             //Send offer to provider
-            await serviceProvider.offerDirectReceive(offer);
+            await serviceProvider.offerDirectReceive(provider, offer);
             logger.silly("serviceConsumer.rentService() offer direct sent to provider: " + offer._id);
             //Commence offer direct (start expiry timer)
             await serviceOfferDirect.commence(offer);
@@ -93,18 +93,21 @@ exports.rentService = (consumer) => {
     })
 }
 
-exports.offerDirectAccepted = (offerDirect) => {
+exports.offerDirectAccepted = (consumer, offerDirect) => {
     return new Promise(async (resolve, reject) => {
         try {
             logger.silly("serviceConsumer.offerDirectAccepted() called with offerDirect: " + offerDirect._id);
             //Reject if offer not defined
             if (!offerDirect) reject("Offer not defined");
             //Reject if offer not in state MARKET
-            if (offerDirect.state !== "MARKET") reject("Offer not in state MARKET");
-            //Get consumer of service
-            let consumer = await Consumer.findOne({account: offerDirect.seller});
-            //Reject if consumer not found
-            if (!consumer) reject("Consumer not found to rent service");
+            if (offerDirect.state !== "MARKET") {
+                logger.error("serviceConsumer.offerDirectAccepted() offer direct not in state MARKET: " + offerDirect._id);
+                reject("Offer not in state MARKET");
+            }
+            if (!consumer) {
+                logger.error("serviceConsumer.offerDirectAccepted() consumer not defined: " + offerDirect._id);
+                reject("Consumer not defined");
+            }
             //Change state of offer direct to ACCEPTED
             offerDirect.state = "ACCEPTED";
             await offerDirect.save();
