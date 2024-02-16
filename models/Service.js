@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const  mongooseHistory = require('mongoose-history');
 
 const serviceSchema = new mongoose.Schema( {
     //States ["IDLE", "MARKET","ACTIVE", "DONE"]
@@ -17,6 +18,20 @@ const serviceSchema = new mongoose.Schema( {
     provider: {type: mongoose.Schema.Types.ObjectId, ref: 'Provider'},
     //Count
     count: {type: Number, default: 0},
+        createdAt: {type: Date, default: Date.now},
+        updatedAt: {type: Date, default: Date.now}
+    },
+);
+
+serviceSchema.pre('save', function (next) {
+    if (this.isNew) {
+        this.createdAt = new Date(); // Or your custom timestamp
+    } else {
+        this.updatedAt = new Date(); // Or your custom timestamp
+    }
+    next();
 });
+
+serviceSchema.plugin(mongooseHistory)
 
 module.exports = mongoose.model('Service', serviceSchema);

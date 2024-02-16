@@ -1,7 +1,7 @@
 /**
  * Test 4
  *
- * Number of consumers: 1
+ * Number of consumers: 2
  * Number of providers: 2
  * Time of simulation: 10000 units
  *
@@ -24,6 +24,8 @@ const servicePoolCapacity = require("../services/PoolCapacity");
 
 const {promises} = require('../utils/events')
 
+let numConsumers = 2;
+let numProviders = 2;
 
 mongoose.connect(config.db.url).then(async () => {
     //Drop account collection
@@ -38,12 +40,12 @@ mongoose.connect(config.db.url).then(async () => {
         await servicePoolCapacity.PoolCapacity.deleteMany({});
 
         let providers = [];
-        for(let i = 0; i < 2; i++){
+        for(let i = 0; i < numProviders; i++){
             providers.push(await serviceProvider.create(await serviceAccount.create()));
         }
 
         let consumers = [];
-        for(let i = 0; i < 1; i++){
+        for(let i = 0; i < numConsumers; i++){
            consumers.push(await serviceConsumer.create(await serviceAccount.create()));
         }
 
@@ -58,7 +60,7 @@ mongoose.connect(config.db.url).then(async () => {
             await serviceConsumer.rentService(consumer);
         }
 
-        for (let i = 0; i < 100000; i++) {
+        for (let i = 0; i < 10000; i++) {
             await clock.tickAsync(1);
             //Flush all promises in queue
             await Promise.all(promises);
